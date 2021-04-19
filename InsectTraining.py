@@ -98,7 +98,7 @@ model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform'
 model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
 model.add(Flatten())
 model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
-model.add(Dense(29, activation='sigmoid'))
+model.add(Dense(29, activation='softmax'))
 
 #compile model using accuracy to measure model performance
 from sklearn.metrics import fbeta_score
@@ -115,7 +115,7 @@ datagen = ImageDataGenerator(
     horizontal_flip = True)
 datagen.fit(X_train)
 
-model.fit(datagen.flow(X_train, Y_train, batch_size=32), validation_data=(X_validation, Y_validation), epochs=50, steps_per_epoch=len(X_train) / 32)
+model.fit(datagen.flow(X_train, Y_train, batch_size=32), validation_data=(X_validation, Y_validation), epochs=50, steps_per_epoch=len(X_train) / 32, shuffle=True)
 #%%
 p = model.predict(X_validation)
 np.set_printoptions(edgeitems=20)
