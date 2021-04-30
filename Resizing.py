@@ -1,14 +1,17 @@
+#
+# Function to resize NxN square images in folder.
+# Creates a new folder for the images in the path
+#
+# Example:
+# resizeImg(128, imgdir = "data/Train/TrainImages/", overwrite = False)
+# Resizes images to 128x128 to folder data/Train/TrainImages/128/
+#
+# Overwrite
+# if overwrite false, it will not resize if resize folder already exists
+# if folder exists but not all images are resized, set to True
 
-import os
-
-import numpy
-
-instances = []
 from PIL import Image
-import matplotlib.pyplot as plt
-print("hello")
-#def resizeImg(size):
-from os import mkdir, path, getcwd
+from os import mkdir, path, listdir
 
 def resizeImg(size = 128, imgdir = "data/Train/TrainImages/", overwrite = False):
     dir = str(imgdir) + str(size) + "/"
@@ -21,9 +24,8 @@ def resizeImg(size = 128, imgdir = "data/Train/TrainImages/", overwrite = False)
         resizeFunc(128,str(imgdir))
 
 def resizeFunc(size = 128, imgdir = ""):
-    for x in range(1, len(os.listdir(imgdir))):
+    for x in range(1, len(listdir(imgdir))):
         i = Image.open(imgdir + "/Image" + str(x) + ".jpg")
         i = i.resize((128, 128), Image.BILINEAR)
         i.save(imgdir + str(size) + "/Image" + str(x) + ".jpg")
 
-resizeImg(128, True)

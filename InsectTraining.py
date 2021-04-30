@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 import tensorflow as tf
 import numpy as np
@@ -53,6 +54,14 @@ from tensorflow.keras.utils import to_categorical
 #Y_train = to_categorical(Y_train)
 #Y_validation = to_categorical(Y_validation)
 #%%
+#ocurrences = []
+#for x in range(1, np.amax(Y_train,0).astype(int)+1):
+#    #print("Counting occurences of "+str(x))
+#    ocurrences.append(np.count_nonzero(Y_train == x))
+#largestclass = np.amax(ocurrences,0)
+#smallestclass = np.amin(ocurrences,0)
+#scalefactor = 0
+#classWeights = (1 + (smallestclass) / (largestclass+scalefactor)) - (ocurrences/(largestclass+scalefactor))
 
 
 scaler = StandardScaler()
@@ -62,43 +71,47 @@ X_validation = scaler.transform(X_validation.reshape(-1, X_validation.shape[-1])
 Y_train = Y_train.astype(int) - 1 # labels from 0-29
 Y_validation = Y_validation.astype(int) - 1
 
+#%%
+from sklearn.utils import class_weight
+Class_Weights = class_weight.compute_class_weight('balanced',np.unique(Y_train),Y_train)
+Class_Weights = {i : Class_Weights[i] for i in range(np.max(Y_train)+1)}
+#%%
+
+
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D
-model = Sequential()
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
+#model = Sequential()
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.constraints import MaxNorm
 #add model layers
 #model.add(Conv2D(64, kernel_size=3, activation='relu',activity_regularizer=l2(0.005)))
 from keras import backend
-def fbeta(y_true, y_pred, beta=2):
-	# clip predictions
-	y_pred = backend.clip(y_pred, 0, 1)
-	# calculate elements
-	tp = backend.sum(backend.round(backend.clip(y_true * y_pred, 0, 1)), axis=1)
-	fp = backend.sum(backend.round(backend.clip(y_pred - y_true, 0, 1)), axis=1)
-	fn = backend.sum(backend.round(backend.clip(y_true - y_pred, 0, 1)), axis=1)
-	# calculate precision
-	p = tp / (tp + fp + backend.epsilon())
-	# calculate recall
-	r = tp / (tp + fn + backend.epsilon())
-	# calculate fbeta, averaged across each class
-	bb = beta ** 2
-	fbeta_score = backend.mean((1 + bb) * (p * r) / (bb * p + r + backend.epsilon()))
-	return fbeta_score
-
-
-
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 1)))
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+# RegulazationValue = 0.0001
+#
+# model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 1)))
+# model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
+# model.add(BatchNormalization())
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+# model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+# model.add(BatchNormalization())
+# model.add(MaxPooling2D((2, 2)))
+# model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+# model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+#
+# model.add(Flatten())
+# model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
+#
+# model.add(Dense(29, kernel_regularizer=l2(RegulazationValue), activation='softmax'))
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.layers import Input
+input_tensor = Input(shape=(128, 128, 1))
+model = Sequential()
+model.add( VGG16(input_shape=(128, 128, 1), weights='imagenet', include_top=False))
 model.add(Flatten())
-model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+model.add(Dense(1024, activation='relu', kernel_initializer='he_uniform'))
 model.add(Dense(29, activation='softmax'))
+
 
 #compile model using accuracy to measure model performance
 from sklearn.metrics import fbeta_score
@@ -108,14 +121,18 @@ model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=
 #%%
 from keras.preprocessing.image import ImageDataGenerator
 datagen = ImageDataGenerator(
-    rotation_range = 40,
+	featurewise_center=True,
+	featurewise_std_normalization=True,
+    rotation_range = 20,
     width_shift_range = 0.2,
     height_shift_range = 0.2,
+    zoom_range=0.2,
     shear_range = 0.2,
     horizontal_flip = True)
 datagen.fit(X_train)
 
-model.fit(datagen.flow(X_train, Y_train, batch_size=32), validation_data=(X_validation, Y_validation), epochs=50, steps_per_epoch=len(X_train) / 32, shuffle=True)
+#%%
+history = model.fit(datagen.flow(X_train, Y_train, batch_size=32), validation_data=(X_validation, Y_validation), epochs=100, steps_per_epoch=len(X_train) / 32, shuffle=True, class_weight=Class_Weights)
 #%%
 p = model.predict(X_validation)
 np.set_printoptions(edgeitems=20)
@@ -132,6 +149,37 @@ score = precision_score(Y_validation, Pred, average='weighted')
 print("Training score is : " + str(score))
 
 #%%
+print(history.history.keys())
+#  "Accuracy"
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
+# "Loss"
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
 
 
+#%%
+ocurrences = []
+for x in range(1, np.amax(Pred,0).astype(int)+1):
+    #print("Counting occurences of "+str(x))
+    ocurrences.append(np.count_nonzero(Pred == x))
+ocurrencespred = []
+for x in range(1, np.amax(Y_validation,0).astype(int)+1):
+    #print("Counting occurences of "+str(x))
+    ocurrencespred.append(np.count_nonzero(Y_validation == x))
 
+products = []
+for num1, num2 in zip(ocurrences, ocurrencespred):
+	products.append(num1 / num2)
+print(ocurrences)
+print(ocurrencespred)
