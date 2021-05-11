@@ -14,18 +14,42 @@ from PIL import Image
 from os import mkdir, path, listdir
 
 def resizeImg(size = 128, imgdir = "data/Train/TrainImages/", overwrite = False):
-    dir = str(imgdir) + str(size) + "/"
+    dir = imgdir + str(size) + "/"
     if not path.isdir(dir):
-        print("resizing images to folder: "+ str(imgdir) + str(size) + "/")
+        print("resizing images to folder: " + dir)
         mkdir(dir)
-        resizeFunc(128,str(imgdir))
+        resizeFunc(size,str(imgdir))
     elif overwrite:
-        print("overwriting existing images in: "+str(imgdir) + str(size) + "/")
-        resizeFunc(128,str(imgdir))
+        print("overwriting existing images in: "+ dir)
+        resizeFunc(size,str(imgdir))
 
 def resizeFunc(size = 128, imgdir = ""):
-    for x in range(1, len(listdir(imgdir))):
-        i = Image.open(imgdir + "/Image" + str(x) + ".jpg")
-        i = i.resize((128, 128), Image.BILINEAR)
+    nr_of_images = str(listdir(imgdir)).count("Image")
+    print(nr_of_images)
+    for x in range(1, nr_of_images+1):
+        i = Image.open(imgdir + "Image" + str(x) + ".jpg")
+        i = i.resize((size, size), Image.BILINEAR)
+        printProgressBar(x,nr_of_images,length=30)
         i.save(imgdir + str(size) + "/Image" + str(x) + ".jpg")
 
+# Print iterations progress
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total:
+        print()
