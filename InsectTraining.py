@@ -50,28 +50,13 @@ nr, x, y, c = x_test.shape
 print("x_test shape:" + str(x_test.shape))
 X_test = x_test.reshape(nr,x,y,c)
 
-#%%
+#%% load test labels
 Y_train = np.load("data/Train/trainLbls.npy")
 Y_validation = np.load("data/Validation/valVectors.npy")
 Y_train = Y_train.astype(int) - 1 # labels from 0-29
 Y_validation = Y_validation.astype(int) - 1
-from sklearn.model_selection import train_test_split
-#X_train, X_validation, Y_train, Y_validation = train_test_split( X_train, Y_train, test_size=0.25, random_state=42)
 
-from tensorflow.keras.utils import to_categorical
-#Y_train = to_categorical(Y_train)
-#Y_validation = to_categorical(Y_validation)
-#%%
-#ocurrences = []
-#for x in range(1, np.amax(Y_train,0).astype(int)+1):
-#    #print("Counting occurences of "+str(x))
-#    ocurrences.append(np.count_nonzero(Y_train == x))
-#largestclass = np.amax(ocurrences,0)
-#smallestclass = np.amin(ocurrences,0)
-#scalefactor = 0
-#classWeights = (1 + (smallestclass) / (largestclass+scalefactor)) - (ocurrences/(largestclass+scalefactor))
-
-
+# Normalize data
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1])).reshape(X_train.shape)
 X_validation = scaler.transform(X_validation.reshape(-1, X_validation.shape[-1])).reshape(X_validation.shape)
@@ -89,30 +74,19 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
 model = Sequential()
 from tensorflow.keras.regularizers import l2
-from tensorflow.keras.constraints import MaxNorm
-#add model layers
-#model.add(Conv2D(64, kernel_size=3, activation='relu',activity_regularizer=l2(0.005)))
-from keras import backend
 RegulazationValue = 0.0001
 
 model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 3)))
-model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
 model.add(MaxPooling2D((2, 2)))
 model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
 model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
 model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
 model.add(Flatten())
 model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
-model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
 model.add(Dense(29, kernel_regularizer=l2(RegulazationValue), activation='softmax'))
 
-import tensorflow.keras.optimizers as optimizers
-model.compile(optimizer='Adam', metrics=['accuracy'], loss='sparse_categorical_crossentropy')
-
 #compile model using accuracy to measure model performance
-from sklearn.metrics import fbeta_score
+model.compile(optimizer='Adam', metrics=['accuracy'], loss='sparse_categorical_crossentropy')
 
 print(model.summary())
 #%%
@@ -145,24 +119,20 @@ print("Training score is : " + str(score))
 
 
 #%%
+# Save testresults in format that matches what kaggle shitsite wants
 Y_test = np.argmax((model.predict(X_test)), 1)
 Y_test_output = np.empty((np.size(Y_test),2),dtype=int)
-#Y_test_output.append("ID,Label")
 for i in range(0, np.size(Y_test)):
     Y_test_output[i,:] = np.array([(i+1), 1+Y_test[i].astype(int)])
-    #Y_test_output.append(str(label)+","+str(Y_test[label]))
-
 np.savetxt("Testresults.csv", Y_test_output.astype(int), fmt='%i', delimiter=",",header="ID,Label",comments='')
 
-#%%
-#from datetime import datetime
-#now = datetime.now()
-#model.save("Model_"+now.strftime("%d/%m/%Y_%H:%M:%S"))
-#%%
+
+
+# plot accuracy and loss
 print(history.history.keys())
 #  "Accuracy"
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
@@ -177,19 +147,3 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 plt.show()
 
-
-#%%
-ocurrences = []
-for x in range(1, np.amax(Pred,0).astype(int)+1):
-    #print("Counting occurences of "+str(x))
-    ocurrences.append(np.count_nonzero(Pred == x))
-ocurrencespred = []
-for x in range(1, np.amax(Y_validation,0).astype(int)+1):
-    #print("Counting occurences of "+str(x))
-    ocurrencespred.append(np.count_nonzero(Y_validation == x))
-
-products = []
-for num1, num2 in zip(ocurrences, ocurrencespred):
-	products.append(num1 / num2)
-print(ocurrences)
-print(ocurrencespred)
