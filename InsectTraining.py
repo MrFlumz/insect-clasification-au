@@ -87,42 +87,29 @@ Class_Weights = {i : Class_Weights[i] for i in range(np.max(Y_train)+1)}
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
-#model = Sequential()
+model = Sequential()
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.constraints import MaxNorm
 #add model layers
 #model.add(Conv2D(64, kernel_size=3, activation='relu',activity_regularizer=l2(0.005)))
 from keras import backend
-RegulazationValue = 0.001
-# model.add(Dense(29, kernel_regularizer=l2(RegulazationValue), activation='softmax'))
-from tensorflow.keras.applications.vgg16 import VGG16
-from tensorflow.keras.applications.inception_v3 import InceptionV3
-from tensorflow.keras.applications.resnet_v2 import ResNet152V2
-from tensorflow.keras.applications.resnet50 import ResNet50
-from tensorflow.keras.layers import Input, GlobalAvgPool2D, GaussianNoise
-input_tensor = Input(shape=(128, 128, 3))
-model = Sequential()
-model.add( InceptionV3(input_shape=(imageSize, imageSize, 3), weights='imagenet', include_top=False))
+RegulazationValue = 0.0001
 
-regularizer = l2(RegulazationValue)
-
-for layer in model.layers:
-    for attr in ['kernel_regularizer']:
-        if hasattr(layer, attr):
-          setattr(layer, attr, regularizer)
-
-#for layer in model.layers[:]:
-#    layer.trainable = False
-model.add(Dropout(0.6))
-model.add(GlobalAvgPool2D())
-model.add(Dense(4096, activation='relu',kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
-model.add(Dropout(0.6))
-model.add(Dense(512, activation='relu',kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
-model.add(Dropout(0.6))
-model.add(Dense(29, activation='softmax',kernel_regularizer=l2(RegulazationValue)))
+model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 3)))
+model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
+model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+model.add(Flatten())
+model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
+model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
+model.add(Dense(29, kernel_regularizer=l2(RegulazationValue), activation='softmax'))
 
 import tensorflow.keras.optimizers as optimizers
-model.compile(optimizer=optimizers.RMSprop(lr=1e-5), metrics=['acc'], loss='sparse_categorical_crossentropy')
+model.compile(optimizer='Adam', metrics=['accuracy'], loss='sparse_categorical_crossentropy')
 
 #compile model using accuracy to measure model performance
 from sklearn.metrics import fbeta_score
@@ -140,7 +127,7 @@ horizontal_flip = True)
 datagen.fit(X_train)
 
 #%%
-history = model.fit(datagen.flow(X_train, Y_train, batch_size=64), validation_data=(X_validation, Y_validation), epochs=100, steps_per_epoch=len(X_train) / 64, shuffle=True, class_weight=Class_Weights)
+history = model.fit(datagen.flow(X_train, Y_train), validation_data=(X_validation, Y_validation), epochs=80, steps_per_epoch=len(X_train) / 64, shuffle=True, class_weight=Class_Weights)
 #%%
 p = model.predict(X_validation)
 np.set_printoptions(edgeitems=20)
