@@ -10,6 +10,7 @@
 # if overwrite false, it will not resize if resize folder already exists
 # if folder exists but not all images are resized, set to True
 
+# https://pillow.readthedocs.io/en/stable/index.html
 from PIL import Image
 from os import mkdir, path, listdir
 

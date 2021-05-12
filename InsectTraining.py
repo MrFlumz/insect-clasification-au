@@ -3,8 +3,11 @@
 import numpy as np
 import os
 instances = []
+# https://pillow.readthedocs.io/en/stable/index.html
 from PIL import Image
 import matplotlib.pyplot as plt
+
+# https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
 from sklearn.preprocessing import StandardScaler
 
 from Resizing import resizeImg
@@ -14,7 +17,6 @@ resizeImg(imageSize, imgdir = "data/Validation/ValidationImages/", overwrite = F
 resizeImg(imageSize, imgdir = "data/Test/TestImages/", overwrite = False)
 #%%
 dir = "data/Train/TrainImages/" + str(imageSize) + "/"
-#print(len(os.listdir(dir)))
 fname = []
 for x in range(1, 1+len(os.listdir(dir))):
     fname.append( dir + "Image"+str(x)+".jpg")
@@ -25,14 +27,12 @@ plt.show()
 
 
 dir = "data/Validation/ValidationImages/" + str(imageSize)  + "/"
-print(len(os.listdir(dir)))
 fname = []
 for x in range(1, 1+len(os.listdir(dir))):
     fname.append( dir + "Image"+str(x)+".jpg")
 x_validation = np.array([np.array(Image.open(i)) for i in fname]) # The L means that is just stores the Luminance
 
 dir = "data/Test/TestImages/" + str(imageSize)  + "/"
-print(len(os.listdir(dir)))
 fname = []
 for x in range(1, 1+len(os.listdir(dir))):
     fname.append( dir + "Image"+str(x)+".jpg")
@@ -56,8 +56,9 @@ Y_validation = np.load("data/Validation/valVectors.npy")
 Y_train = Y_train.astype(int) - 1 # labels from 0-29
 Y_validation = Y_validation.astype(int) - 1
 
-# Normalize data
+# Normalize data - https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
 scaler = StandardScaler()
+# https://stackoverflow.com/a/59601298
 X_train = scaler.fit_transform(X_train.reshape(-1, X_train.shape[-1])).reshape(X_train.shape)
 X_validation = scaler.transform(X_validation.reshape(-1, X_validation.shape[-1])).reshape(X_validation.shape)
 X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
@@ -69,27 +70,25 @@ Class_Weights = class_weight.compute_class_weight('balanced',np.unique(Y_train),
 Class_Weights = {i : Class_Weights[i] for i in range(np.max(Y_train)+1)}
 #%%
 
-
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
 model = Sequential()
 from tensorflow.keras.regularizers import l2
 RegulazationValue = 0.0001
-
-model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 3)))
+model.add(Conv2D(256, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', input_shape=(128, 128, 3)))
 model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
+model.add(Conv2D(128, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same', ))
 model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
+model.add(Conv2D(64, (3, 3), activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform', padding='same'))
 model.add(Flatten())
-model.add(Dense(128, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
+model.add(Dense(256, activation='relu', kernel_regularizer=l2(RegulazationValue), kernel_initializer='he_uniform'))
 model.add(Dense(29, kernel_regularizer=l2(RegulazationValue), activation='softmax'))
 
 #compile model using accuracy to measure model performance
 model.compile(optimizer='Adam', metrics=['accuracy'], loss='sparse_categorical_crossentropy')
 
 print(model.summary())
-#%%
+#%% https://keras.io/api/preprocessing/image/
 from keras.preprocessing.image import ImageDataGenerator
 datagen = ImageDataGenerator(
 rotation_range = 20,
@@ -119,7 +118,7 @@ print("Training score is : " + str(score))
 
 
 #%%
-# Save testresults in format that matches what kaggle shitsite wants
+# Save testresults in format that matches what kaggle wants
 Y_test = np.argmax((model.predict(X_test)), 1)
 Y_test_output = np.empty((np.size(Y_test),2),dtype=int)
 for i in range(0, np.size(Y_test)):
@@ -128,8 +127,10 @@ np.savetxt("Testresults.csv", Y_test_output.astype(int), fmt='%i', delimiter=","
 
 
 
-# plot accuracy and loss
+
 print(history.history.keys())
+# plot accuracy and loss
+# https://stackoverflow.com/a/56807595
 #  "Accuracy"
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
